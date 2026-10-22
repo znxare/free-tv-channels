@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-label="Free TV India: 94 free live channels, old-TV style, for Android TV">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17130e"/>
+      <stop offset="1" stop-color="#0b0a08"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2218"/>
+      <stop offset="1" stop-color="#14110c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="400" fill="url(#bg)"/>
+  <!-- tricolour band -->
+  <rect y="0" width="1280" height="8" fill="#FF9933"/>
+  <rect y="8" width="1280" height="8" fill="#FFFFFF"/>
+  <rect y="16" width="1280" height="8" fill="#138808"/>
+
+  <!-- retro TV -->
+  <g transform="translate(90,80)">
+    <line x1="95" y1="0" x2="140" y2="45" stroke="#F5A623" stroke-width="6" stroke-linecap="round"/>
+    <line x1="185" y1="0" x2="140" y2="45" stroke="#F5A623" stroke-width="6" stroke-linecap="round"/>
+    <rect x="0" y="45" width="300" height="215" rx="28" fill="#2b241b" stroke="#F5A623" stroke-width="6"/>
+    <rect x="22" y="67" width="200" height="171" rx="20" fill="url(#screen)"/>
+    <text x="122" y="170" text-anchor="middle" font-family="Consolas, 'Courier New', monospace" font-size="78" font-weight="700" fill="#F5A623">07</text>
+    <rect x="70" y="190" width="104" height="18" rx="4" fill="#E24B4A"/>
+    <text x="122" y="204" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#fff">LIVE</text>
+    <circle cx="262" cy="105" r="16" fill="#F5A623"/>
+    <circle cx="262" cy="155" r="16" fill="#5f5a52"/>
+    <rect x="245" y="190" width="34" height="8" rx="4" fill="#5f5a52"/>
+    <rect x="245" y="208" width="34" height="8" rx="4" fill="#5f5a52"/>
+  </g>
+
+  <!-- text -->
+  <text x="460" y="165" font-family="'Segoe UI', Arial, sans-serif" font-size="76" font-weight="800" fill="#FFFFFF">Free TV <tspan fill="#F5A623">India</tspan></text>
+  <text x="463" y="215" font-family="'Segoe UI', Arial, sans-serif" font-size="28" fill="#d8d2c6">94 free live channels · old-TV style · for Android TV</text>
+  <g font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="600">
+    <rect x="463" y="250" width="150" height="40" rx="20" fill="#FF9933"/>
+    <text x="538" y="276" text-anchor="middle" fill="#2b1500">▲ ▼  Surf</text>
+    <rect x="627" y="250" width="160" height="40" rx="20" fill="#FFFFFF"/>
+    <text x="707" y="276" text-anchor="middle" fill="#1c1a17">OK  Channel list</text>
+    <rect x="801" y="250" width="170" height="40" rx="20" fill="#138808"/>
+    <text x="886" y="276" text-anchor="middle" fill="#ffffff">560 KB · No login</text>
+  </g>
+  <text x="463" y="340" font-family="'Segoe UI', Arial, sans-serif" font-size="18" fill="#8a857c">News · devotional · music · movies · kids · nature — official free streams only</text>
+</svg>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180 TV launcher banner: dark screen with an amber channel number. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp" android:height="180dp"
+    android:viewportWidth="320" android:viewportHeight="180">
+    <path android:fillColor="#141210" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#F5A623" android:pathData="M28,46h56v88h-56z" />
+    <path android:fillColor="#141210" android:pathData="M40,58h32v64h-32z" />
+    <path android:fillColor="#F5A623" android:pathData="M104,62h188v18h-188z" />
+    <path android:fillColor="#5F5A52" android:pathData="M104,96h140v12h-140z" />
+    <path android:fillColor="#5F5A52" android:pathData="M104,116h100v12h-100z" />
+</vector>

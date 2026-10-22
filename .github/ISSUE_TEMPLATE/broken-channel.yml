@@ -1,0 +1,24 @@
+name: 🔴 Broken channel
+description: A channel won't play or shows "off-air, skipping"
+title: "Broken: "
+labels: [broken-channel]
+body:
+  - type: input
+    id: channel
+    attributes:
+      label: Channel number and name
+      placeholder: "7 ABP News"
+    validations:
+      required: true
+  - type: dropdown
+    id: since
+    attributes:
+      label: How long has it been down?
+      options: ["Just now", "A few hours", "More than a day"]
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Your TV or device (optional)
+      placeholder: "Lumio Arc 7 projector"

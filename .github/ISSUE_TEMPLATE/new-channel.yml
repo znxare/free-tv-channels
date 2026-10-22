@@ -1,0 +1,33 @@
+name: 🟢 Suggest a channel
+description: Know an official, free stream that should be on Free TV India?
+title: "Add: "
+labels: [new-channel]
+body:
+  - type: markdown
+    attributes:
+      value: "Only **official, free-to-air** streams can be added. Paid channels and re-streams are always declined."
+  - type: input
+    id: name
+    attributes:
+      label: Channel name
+      placeholder: "DD National"
+    validations:
+      required: true
+  - type: dropdown
+    id: group
+    attributes:
+      label: Group
+      options: [Government, Hindi news, English news, Business, World news, Devotional, Music, Movies, Entertainment, Knowledge, Kids]
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Stream link (.m3u8), if you have one
+  - type: textarea
+    id: source
+    attributes:
+      label: Why is it official and free?
+      description: "For example: the broadcaster's own website or app plays it free, or it's on Samsung TV Plus."
+    validations:
+      required: true
