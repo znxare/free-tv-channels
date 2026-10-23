@@ -4,7 +4,7 @@
 
 # Free TV India 📺
 
-**Turn any Android TV, Google TV or projector into an old-school television.**<br>
+**A free, legal IPTV player that turns any Android TV, Google TV, Fire TV or projector into an old-school television.**<br>
 Press **▲ ▼** to flip through **94 free live Indian & international channels**: no login, no subscription, no ads in the app, no clutter.
 
 [![Download APK](https://img.shields.io/github/v/release/znxare/free-tv-channels?label=Download%20APK&style=for-the-badge&logo=android&color=FF9933&logoColor=white)](https://github.com/znxare/free-tv-channels/releases/latest/download/FreeTV.apk)
@@ -190,6 +190,14 @@ No. There is no login, no analytics and no ads in the app. It remembers your las
 ## ⚖️ Disclaimer
 
 Free TV India is an independent, non-commercial project. It does not host, store, record or re-transmit any content. All channel names, logos and content belong to their respective owners, and each stream is provided by its broadcaster or official distribution partner. If you are a rights holder and want a stream removed from the list, please [open an issue](../../issues/new/choose) and it will be removed promptly.
+
+## 🔎 Also known as
+
+Free TV India is a **free IPTV app for India**: an **IPTV player for Android TV**, a **live TV app for Google TV and Fire TV Stick**, and a lightweight **M3U8 / HLS player** for **Android projectors and TV boxes**. People find it when searching for:
+
+`free IPTV India` · `Indian IPTV player` · `IPTV for Android TV` · `free live TV app` · `Hindi live TV` · `Hindi news live` · `Indian TV channels free` · `desi TV app` · `Bollywood TV channels` · `M3U8 player for TV` · `IPTV for projector` · `free TV for Fire Stick` · `DD News live` · `Aaj Tak live TV` · `Aastha live` · `kids cartoon channels free`
+
+> Unlike most IPTV apps and M3U playlists, every channel here is an **official free stream**. There are no paid channels and no pirated re-streams, so it's safe to use and share.
 
 ## 🙏 Credits
 
