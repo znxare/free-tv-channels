@@ -29,6 +29,17 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Use the app's signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.FREETV_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::FREETV_KEYSTORE_B64 secret is missing. This APK gets a random key and will NOT install over the existing app."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/freetv.keystore"
+          echo "FREETV_KEYSTORE=$RUNNER_TEMP/freetv.keystore" >> "$GITHUB_ENV"
+
       - name: Build release APK
         working-directory: app
         run: |
