@@ -34,6 +34,18 @@ Before opening a pull request:
 
 Once merged, every TV running Free TV picks up the change the next time the app opens.
 
+### Automatic link check
+
+Every pull request that touches `channels.json` is tested automatically, and the check fails if a stream doesn't play. Every morning the same test runs on the whole list and keeps one **Broken channel links** issue up to date (label `link-check`); it closes itself when every channel plays again.
+
+You can run it yourself before opening a PR (Python 3, nothing to install):
+
+```bash
+python scripts/check_streams.py
+```
+
+The check runs from a US server, so a channel limited to viewers in India can show as broken there while still playing on a TV in India.
+
 ## App changes
 
 The app lives in [`app/`](app). Keep it light: no new libraries without a very good reason, no web views and no analytics. Test on a real Android TV or projector if you can.
