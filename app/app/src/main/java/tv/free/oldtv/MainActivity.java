@@ -1,7 +1,10 @@
 package tv.free.oldtv;
 
 import android.app.Activity;
+import android.app.UiModeManager;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -11,8 +14,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +32,7 @@ import android.widget.TextView;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter;
@@ -47,8 +54,10 @@ import java.util.Set;
 
 /**
  * Old-TV style live channel player.
- * Up/Down = next/previous channel, OK = channel list, hold OK = favourite,
+ * Remote: Up/Down = next/previous channel, OK = channel list, hold OK = favourite,
  * Left/Right in the list = jump a group, hold Right on TV = start-on-power-on toggle.
+ * Touch (phones, tablets): swipe up/down = next/previous channel, swipe right = channel list,
+ * tap = info and buttons, double-tap = fit/fill the screen, hold = favourite.
  */
 public class MainActivity extends Activity {
 
@@ -71,14 +80,20 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private int current, sel, dir = 1, skipped;
     private boolean okLongPressed, rightLongPressed;
+    private boolean touch;        // phone or tablet: show touch hints and on-screen buttons
+    private boolean fill;         // double-tap: crop the picture to fill the screen instead of fitting it
+    private float videoAspect;    // width / height of the playing picture, 0 until known
 
+    private FrameLayout root;
     private SurfaceView surface;
-    private View osd, hint;
-    private TextView osdNum, osdName, osdGroup, message, toast;
+    private View osd, buttons;
+    private TextView osdNum, osdName, osdGroup, message, toast, hint;
     private ListView list;
     private ChannelAdapter adapter;
 
-    private final Runnable hideOsd = () -> { osd.setVisibility(View.GONE); hint.setVisibility(View.GONE); };
+    private final Runnable hideOsd = () -> {
+        osd.setVisibility(View.GONE); hint.setVisibility(View.GONE); buttons.setVisibility(View.GONE);
+    };
     private final Runnable hideToast = () -> toast.setVisibility(View.GONE);
     private final Runnable skip = this::skipDeadChannel;
 
@@ -88,6 +103,10 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         prefs = getSharedPreferences("tv", MODE_PRIVATE);
         favs.addAll(prefs.getStringSet("favs", new HashSet<>()));
+        fill = prefs.getBoolean("fill", false);
+        UiModeManager mode = (UiModeManager) getSystemService(UI_MODE_SERVICE);
+        boolean tv = mode != null && mode.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION;
+        touch = !tv && getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN);
         parseInto(channels, readLocalList());
         buildUi();
         String last = prefs.getString("lastName", null);
@@ -118,9 +137,22 @@ public class MainActivity extends Activity {
                 ui.postDelayed(skip, 700);   // a moment to show "off-air" before moving on
                 showMessage("Channel off-air…");
             }
+            @Override public void onVideoSizeChanged(VideoSize v) {
+                if (v.width > 0 && v.height > 0) { videoAspect = v.width * v.pixelWidthHeightRatio / v.height; layoutVideo(); }
+            }
         });
         if (!channels.isEmpty()) tune(current);
         else showMessage("Couldn't load the channel list.");
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        // Phones: hide the status and navigation bars; a swipe from the edge brings them back for a moment.
+        if (focused) getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
     }
 
     @Override
@@ -319,8 +351,7 @@ public class MainActivity extends Activity {
         list.setVisibility(View.VISIBLE);
         list.setSelectionFromTop(sel, list.getHeight() / 3);
         ui.removeCallbacks(hideOsd);
-        osd.setVisibility(View.GONE);
-        hint.setVisibility(View.GONE);
+        hideOsd.run();
     }
 
     private void closeList() { list.setVisibility(View.GONE); }
@@ -348,6 +379,90 @@ public class MainActivity extends Activity {
         list.setSelectionFromTop(sel, 0);
     }
 
+    // ---- touch: phones and tablets ----
+
+    private void zap(int d) { dir = d; skipped = 0; tune(current + d); }
+
+    private void favouriteCurrent() {
+        root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        toggleFavourite(current);
+        showOsd();
+    }
+
+    private void toggleFill() {
+        fill = !fill;
+        prefs.edit().putBoolean("fill", fill).apply();
+        layoutVideo();
+        flash(fill ? "Picture: fill the screen" : "Picture: fit the screen");
+    }
+
+    /** Size the picture to its real shape: fit inside the screen, or crop to fill it. */
+    private void layoutVideo() {
+        int w = root.getWidth(), h = root.getHeight();
+        if (w == 0 || h == 0) return;
+        int vw = w, vh = h;
+        if (videoAspect > 0) {
+            boolean wider = videoAspect > (float) w / h;
+            if (wider != fill) { vw = w; vh = Math.round(w / videoAspect); }
+            else { vh = h; vw = Math.round(h * videoAspect); }
+        }
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) surface.getLayoutParams();
+        if (lp.width == vw && lp.height == vh) return;
+        lp.width = vw; lp.height = vh;
+        surface.setLayoutParams(lp);
+    }
+
+    /** Switch hints and buttons to touch the first time someone touches the screen. */
+    private void useTouch() {
+        if (touch) return;
+        touch = true;
+        hint.setText(hintText());
+    }
+
+    private String hintText() {
+        return touch
+                ? "swipe ▲ ▼  channel      swipe ▶  list      tap  info      double-tap  fit / fill      hold  favourite"
+                : "▲ ▼  channel      OK  list      hold OK  favourite      ◀ ▶  jump group (in list)      hold ▶  start on power-on";
+    }
+
+    private final class Gestures extends GestureDetector.SimpleOnGestureListener {
+        @Override public boolean onDown(MotionEvent e) { return true; }
+
+        @Override public boolean onSingleTapConfirmed(MotionEvent e) {
+            if (listOpen()) closeList();
+            else if (osd.getVisibility() == View.VISIBLE) hideOsd.run();
+            else showOsd();
+            return true;
+        }
+
+        @Override public boolean onDoubleTap(MotionEvent e) { if (!listOpen()) toggleFill(); return true; }
+
+        @Override public void onLongPress(MotionEvent e) { if (!listOpen() && !channels.isEmpty()) favouriteCurrent(); }
+
+        @Override public boolean onFling(MotionEvent a, MotionEvent b, float vx, float vy) {
+            if (a == null || channels.isEmpty()) return false;
+            float dx = b.getX() - a.getX(), dy = b.getY() - a.getY();
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < dp(50)) return false;
+            if (Math.abs(dy) > Math.abs(dx)) {
+                if (listOpen()) return false;
+                zap(dy < 0 ? 1 : -1);                 // swipe up = next channel, like ▲ on the remote
+            } else if (dx > 0) {
+                if (!listOpen()) openList();          // swipe right = list slides in from the left
+            } else closeList();
+            return true;
+        }
+    }
+
+    private TextView roundButton(String label, String description, View.OnClickListener click) {
+        TextView b = text(22, Color.WHITE, true);
+        b.setText(label);
+        b.setContentDescription(description);
+        b.setGravity(Gravity.CENTER);
+        b.setBackground(panel(0xB8000000, 28));
+        b.setOnClickListener(v -> { click.onClick(v); if (osd.getVisibility() == View.VISIBLE) showOsd(); });
+        return b;
+    }
+
     // ---- on-screen display ----
 
     private void showOsd() {
@@ -357,6 +472,7 @@ public class MainActivity extends Activity {
         osdGroup.setText(c.group);
         osd.setVisibility(View.VISIBLE);
         hint.setVisibility(View.VISIBLE);
+        buttons.setVisibility(touch && !listOpen() ? View.VISIBLE : View.GONE);
         ui.removeCallbacks(hideOsd);
         ui.postDelayed(hideOsd, OSD_MS);
     }
@@ -393,8 +509,13 @@ public class MainActivity extends Activity {
     }
 
     private void buildUi() {
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
+        root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (r - l != or - ol || b - t != ob - ot) root.post(this::layoutVideo);
+        });
+        GestureDetector gestures = new GestureDetector(this, new Gestures());
+        root.setOnTouchListener((v, e) -> { useTouch(); return gestures.onTouchEvent(e); });
 
         surface = new SurfaceView(this);
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
@@ -439,13 +560,32 @@ public class MainActivity extends Activity {
         tp.setMargins(0, dp(32), dp(40), 0);
         root.addView(toast, tp);
 
-        // Key hint, bottom.
-        TextView h = text(14, 0xFFDDDDDD, false);
-        h.setText("▲ ▼  channel      OK  list      hold OK  favourite      ◀ ▶  jump group (in list)      hold ▶  start on power-on");
-        h.setBackgroundColor(0xB8000000);
-        h.setPadding(dp(40), dp(10), dp(40), dp(12));
-        hint = h;
-        root.addView(h, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        // Key or gesture hint, bottom.
+        hint = text(14, 0xFFDDDDDD, false);
+        hint.setText(hintText());
+        hint.setBackgroundColor(0xB8000000);
+        hint.setPadding(dp(40), dp(10), dp(40), dp(12));
+        root.addView(hint, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+
+        // Touch buttons, right edge: shown with the banner on phones and tablets.
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        int size = dp(56), gap = dp(8);
+        View[] bs = {
+                roundButton("▲", "Next channel", v -> zap(1)),
+                roundButton("☰", "Channel list", v -> openList()),
+                roundButton("★", "Favourite", v -> favouriteCurrent()),
+                roundButton("▼", "Previous channel", v -> zap(-1)),
+        };
+        for (View b : bs) {
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(size, size);
+            bp.setMargins(0, gap, 0, gap);
+            col.addView(b, bp);
+        }
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.CENTER_VERTICAL);
+        cp.setMargins(0, 0, dp(32), 0);
+        buttons = col;
+        root.addView(col, cp);
 
         // Channel list over the left third; the activity moves the highlight itself.
         list = new ListView(this);
@@ -457,6 +597,14 @@ public class MainActivity extends Activity {
         list.setVisibility(View.GONE);
         adapter = new ChannelAdapter();
         list.setAdapter(adapter);
+        // Touch: tap a row to watch it, hold a row to add or remove it from Favourites.
+        list.setOnItemClickListener((p, v, pos, id) -> { sel = pos; closeList(); dir = 1; skipped = 0; tune(rows.get(pos)); });
+        list.setOnItemLongClickListener((p, v, pos, id) -> {
+            sel = pos;
+            list.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            toggleFavourite(rows.get(pos));
+            return true;
+        });
         root.addView(list, new FrameLayout.LayoutParams((int) (getResources().getDisplayMetrics().widthPixels * 0.36f), -1, Gravity.START));
 
         setContentView(root);

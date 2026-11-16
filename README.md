@@ -72,6 +72,10 @@ Most "free TV" apps are heavy, full of pop-ups, or quietly stream pirated channe
    ```
 4. Press **Install**, then **Open**. Free TV appears on your home screen with its own banner.
 
+### On a phone
+
+Open the [`FreeTV.apk`](https://github.com/znxare/free-tv-channels/releases/latest/download/FreeTV.apk) link in your phone's browser, tap the download, and allow *Install unknown apps* for the browser when Android asks.
+
 ### Option 2: from a computer, with ADB
 
 ```bash
@@ -98,6 +102,22 @@ Designed for the simplest remotes: **no number keys needed.**
 | **Back** | Exit the app | Close the list |
 
 ⭐ **Favourites** appear in their own group at the top of the list.
+
+### 📱 On a phone or tablet
+
+No remote? Everything works by touch too.
+
+| Gesture | What it does |
+|---|---|
+| **Swipe up / down** | Next / previous channel |
+| **Swipe right** | Open the channel list (scroll it, tap a channel to watch) |
+| **Swipe left** or **tap outside the list** | Close the list |
+| **Tap** | Show what's playing, plus ▲ ☰ ★ ▼ buttons on the right |
+| **Double-tap** | Switch between *fit* (whole picture) and *fill* (no black bars) |
+| **Hold** the picture, or a channel in the list | ★ Add or remove favourite |
+| **Back** | Close the list, or exit |
+
+Turn the phone sideways: the app plays in landscape, either way up.
 
 ## ⚙️ How it works
 

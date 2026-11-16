@@ -1,0 +1,44 @@
+# Builds FreeTV.apk whenever the app changes, so every pull request proves it still compiles.
+# The APK is attached to the run (Actions tab → the run → Artifacts) for testing on a TV or phone.
+name: Build APK
+
+on:
+  pull_request:
+    paths: ["app/**", ".github/workflows/build-apk.yml"]
+  push:
+    branches: [main]
+    paths: ["app/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build release APK
+        working-directory: app
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../FreeTV.apk
+          ls -l ../FreeTV.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeTV-apk
+          path: FreeTV.apk
+          retention-days: 30
