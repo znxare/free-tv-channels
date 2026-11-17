@@ -5,7 +5,9 @@ A channel passes when its playlist answers with a real HLS playlist (#EXTM3U).
 For a master playlist, the first quality level is fetched too, because a
 master file often stays online after the actual video has gone.
 Each channel gets three tries before it is marked broken, so one slow
-response doesn't raise a false alarm.
+response doesn't raise a false alarm. A channel that answers "403 Forbidden"
+is listed as India-only instead of broken: that's how Indian broadcasters
+turn away viewers abroad, including GitHub's US servers.
 
 Standard library only, so it runs on a stock GitHub runner or any PC:
 
@@ -86,31 +88,40 @@ def main():
 
     with ThreadPoolExecutor(WORKERS) as pool:
         results = list(pool.map(check, channels))
-    broken = [(c, r) for c, r in results if r]
-    ok = len(channels) - len(broken)
+    # "403 Forbidden" means the server is up but refuses this viewer. Indian broadcasters
+    # (Zee, Times Network, Shemaroo…) answer that way outside India, so from a US runner
+    # it says nothing about whether the channel plays for viewers in India.
+    india_only = [(c, r) for c, r in results if r and "HTTP 403" in r]
+    broken = [(c, r) for c, r in results if r and "HTTP 403" not in r]
+    ok = len(channels) - len(broken) - len(india_only)
 
-    print(f"{ok} of {len(channels)} channels working")
+    print(f"{ok} of {len(channels)} channels working, {len(india_only)} India-only (not checked), {len(broken)} broken")
     for c, r in broken:
-        print(f"  BROKEN  {c['n']:>3}  {c['name']}  ({r})")
+        print(f"  BROKEN      {c['n']:>3}  {c['name']}  ({r})")
+    for c, _ in india_only:
+        print(f"  INDIA-ONLY  {c['n']:>3}  {c['name']}")
 
     if args.report:
         # The marker line lets the workflow tell whether the broken set changed since last run.
         marker = ",".join(str(c["n"]) for c, _ in broken)
         out = [f"<!-- broken:{marker} -->",
-               f"**{ok} of {len(channels)} channels working.** "
+               f"**{len(broken)} broken, {ok} working, {len(india_only)} India-only.** "
                f"Checked {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}.", ""]
         if broken:
-            out += ["| # | Channel | Group | Problem |", "|---|---|---|---|"]
+            out += ["### Broken", "", "| # | Channel | Group | Problem |", "|---|---|---|---|"]
             out += [f"| {c['n']} | {c['name']} | {c['group']} | {r} |" for c, r in broken]
             out += ["",
-                    "Checked from a GitHub server in the US. A channel that only allows viewers "
-                    "in India can show here even though it plays fine on a TV in India. "
-                    "Test it in VLC before removing it.",
-                    "",
                     f"Fix the `url` in [`channels.json`](https://github.com/"
                     f"{os.environ.get('GITHUB_REPOSITORY', 'znxare/free-tv-channels')}/blob/main/channels.json), "
-                    "or remove the channel "
-                    "and renumber. This issue updates itself every day and closes when everything plays."]
+                    "or remove the channel and renumber. Test the link in VLC first. "
+                    "This issue updates itself every day and closes when nothing is broken.", ""]
+        if india_only:
+            out += ["<details><summary>India-only: not checked (" + str(len(india_only)) + ")</summary>", "",
+                    "These answered *403 Forbidden* to the US checking server, which is how Indian "
+                    "broadcasters block viewers abroad. They aren't counted as broken; check them on a TV in India.",
+                    ""]
+            out += [f"- {c['n']} {c['name']}" for c, _ in india_only]
+            out += ["", "</details>"]
         with open(args.report, "w", encoding="utf-8") as f:
             f.write("\n".join(out) + "\n")
 
