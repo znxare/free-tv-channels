@@ -1,0 +1,70 @@
+# Tests every stream in channels.json.
+#  - Every day: keeps one "Broken channel links" issue up to date, and closes it when all channels play.
+#  - On a pull request that changes channels.json: fails the check if a link in it is broken.
+name: Check channel links
+
+on:
+  schedule:
+    - cron: "30 2 * * *"   # 08:00 India time, every day
+  workflow_dispatch:        # "Run workflow" button on the Actions tab
+  pull_request:
+    paths: [channels.json]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: check-streams-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test every stream
+        id: check
+        run: |
+          python scripts/check_streams.py --report report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '^<!-- broken: -->' report.md; then echo "broken=false" >> "$GITHUB_OUTPUT"
+          else echo "broken=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Fail the pull request if a link is broken
+        if: github.event_name == 'pull_request' && steps.check.outputs.broken == 'true'
+        run: |
+          echo "::error::Some channels in this change don't play. See the summary for the list."
+          exit 1
+
+      - name: Update the "Broken channel links" issue
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BROKEN: ${{ steps.check.outputs.broken }}
+        run: |
+          gh label create link-check --color D93F0B --description "Opened by the daily link check" 2>/dev/null || true
+          issue=$(gh issue list --label link-check --state open --json number --jq '.[0].number // empty')
+          marker=$(head -1 report.md)
+
+          if [ "$BROKEN" = "true" ]; then
+            if [ -z "$issue" ]; then
+              gh issue create --title "Broken channel links" --label link-check --body-file report.md
+            else
+              old=$(gh issue view "$issue" --json body --jq .body | head -1)
+              gh issue edit "$issue" --body-file report.md
+              # Only comment (and notify) when the set of broken channels changed.
+              if [ "$old" != "$marker" ]; then
+                gh issue comment "$issue" --body "The list of broken channels changed. $(sed -n 2p report.md)"
+              fi
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "✅ All channels are playing again. Closing."
+            gh issue close "$issue"
+          fi
