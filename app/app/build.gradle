@@ -10,8 +10,23 @@ android {
         applicationId 'tv.free.oldtv'
         minSdk 21
         targetSdk 34
-        versionCode 2
-        versionName '1.0.0'
+        versionCode 3
+        versionName '1.1.0'
+    }
+
+    // Every build must be signed with the same key as the APK people already have,
+    // or Android refuses the update ("App not installed"). Local builds use this PC's
+    // ~/.android/debug.keystore; GitHub builds get that same key from the FREETV_KEYSTORE secret.
+    def ciKeystore = System.getenv('FREETV_KEYSTORE')
+    signingConfigs {
+        shared {
+            if (ciKeystore) {
+                storeFile file(ciKeystore)
+                storePassword System.getenv('FREETV_KEYSTORE_PASSWORD') ?: 'android'
+                keyAlias System.getenv('FREETV_KEY_ALIAS') ?: 'androiddebugkey'
+                keyPassword System.getenv('FREETV_KEY_PASSWORD') ?: 'android'
+            }
+        }
     }
 
     buildTypes {
@@ -20,8 +35,8 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
-            // Sideloaded app, so the debug key is fine for signing.
-            signingConfig signingConfigs.debug
+            // Sideloaded app, so the debug key is fine for signing, as long as it never changes.
+            signingConfig ciKeystore ? signingConfigs.shared : signingConfigs.debug
         }
     }
 
